@@ -37,6 +37,8 @@ if config.get_or_none('SANDBOX_USER_ID') is not None:
 elif hasattr(os, 'getuid'):
     USER_ID = os.getuid()
 
+WORKSPACE_MOUNT_BASE = config.get('WORKSPACE_MOUNT_BASE')
+
 
 class DockerSSHBox(Sandbox):
     closed = False
@@ -83,8 +85,7 @@ class DockerSSHBox(Sandbox):
 
         self.container_name = f'sandbox-{self.instance_id}'
 
-        if not self.is_container_running():
-            self.restart_docker_container()
+        self.restart_docker_container()
         # set up random user password
         self._ssh_password = str(uuid.uuid4())
         self.setup_user()
@@ -305,6 +306,12 @@ class DockerSSHBox(Sandbox):
                      )
                 )
 
+            mount_dir = self.workspace_dir
+            if WORKSPACE_MOUNT_BASE is not None:
+                if mount_dir.startswith('/'):
+                    mount_dir = mount_dir[1:]
+                mount_dir = os.path.join(WORKSPACE_MOUNT_BASE, mount_dir)
+
             # start the container
             self.container = docker_client.containers.run(
                 self.container_image,
@@ -315,8 +322,12 @@ class DockerSSHBox(Sandbox):
                 name=self.container_name,
                 hostname='opendevin_sandbox',
                 detach=True,
-                volumes={self.workspace_dir: {
-                    'bind': '/workspace', 'mode': 'rw'}},
+                volumes={
+                    mount_dir: {
+                        'bind': '/workspace',
+                        'mode': 'rw'
+                    },
+                },
             )
             logger.info('Container started')
         except Exception as e:
