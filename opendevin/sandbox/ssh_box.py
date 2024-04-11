@@ -22,6 +22,8 @@ DIRECTORY_REWRITE = config.get(
 )  # helpful for docker-in-docker scenarios
 CONTAINER_IMAGE = config.get('SANDBOX_CONTAINER_IMAGE')
 
+SSH_HOSTNAME = config.get('SSH_HOSTNAME')
+
 USE_HOST_NETWORK = platform.system() == 'Linux'
 if config.get('USE_HOST_NETWORK') is not None:
     USE_HOST_NETWORK = config.get('USE_HOST_NETWORK').lower() != 'false'
@@ -152,7 +154,7 @@ class DockerSSHBox(Sandbox):
     def start_ssh_session(self):
         # start ssh session at the background
         self.ssh = pxssh.pxssh()
-        hostname = 'host.docker.internal'
+        hostname = SSH_HOSTNAME
         if RUN_AS_DEVIN:
             username = 'opendevin'
         else:
