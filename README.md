@@ -121,6 +121,19 @@ After completing the MVP, the team will focus on research in various areas, incl
 
 Getting started with the OpenDevin project is incredibly easy. Follow these simple steps to set up and run OpenDevin on your system:
 
+The easiest way to run OpenDevin is inside a Docker container.
+You can run:
+```bash
+docker build -t opendevin-app .
+docker run \
+    -e SANDBOX_TYPE=exec \
+    -e LLM_API_KEY \
+    -p 2001:3001 -p 2000:3000 \
+    -v /var/run/docker.sock:/var/run/docker.sock \
+    -v `pwd`/workspace:/OpenDevin/workspace \
+    opendevin-app
+```
+
 ### 1. Requirements
 * Linux, Mac OS, or [WSL on Windows](https://learn.microsoft.com/en-us/windows/wsl/install)
 * [Docker](https://docs.docker.com/engine/install/)(For those on MacOS, make sure to allow the default Docker socket to be used from advanced settings!)
@@ -222,7 +235,7 @@ For details, please check [this document](./CONTRIBUTING.md).
 
 ## 🤖 Join Our Community
 
-Now we have both Slack workspace for the collaboration on building OpenDevin and Discord server for discussion about anything related, e.g., this project, LLM, agent, etc. 
+Now we have both Slack workspace for the collaboration on building OpenDevin and Discord server for discussion about anything related, e.g., this project, LLM, agent, etc.
 
 * [Slack workspace](https://join.slack.com/t/opendevin/shared_invite/zt-2etftj1dd-X1fDL2PYIVpsmJZkqEYANw)
 * [Discord server](https://discord.gg/mBuDGRzzES)
