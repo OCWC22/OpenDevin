@@ -22,6 +22,10 @@ DIRECTORY_REWRITE = config.get(
 )  # helpful for docker-in-docker scenarios
 CONTAINER_IMAGE = config.get('SANDBOX_CONTAINER_IMAGE')
 
+USE_HOST_NETWORK = platform.system() == 'Linux'
+if config.get('USE_HOST_NETWORK') is not None:
+    USE_HOST_NETWORK = config.get('USE_HOST_NETWORK').lower() != 'false'
+
 # FIXME: On some containers, the devin user doesn't have enough permission, e.g. to install packages
 # How do we make this more flexible?
 RUN_AS_DEVIN = config.get('RUN_AS_DEVIN').lower() != 'false'
@@ -114,23 +118,23 @@ class DockerSSHBox(Sandbox):
                     f'Failed to remove opendevin user in sandbox: {logs}')
 
         # Create the opendevin user
-        exit_code, logs = self.container.exec_run(
-            ['/bin/bash', '-c',
-                f'useradd -rm -d /home/opendevin -s /bin/bash -g root -G sudo -u {USER_ID} opendevin'],
-            workdir='/workspace',
-        )
-        if exit_code != 0:
-            raise Exception(
-                f'Failed to create opendevin user in sandbox: {logs}')
-        exit_code, logs = self.container.exec_run(
-            ['/bin/bash', '-c',
-                f"echo 'opendevin:{self._ssh_password}' | chpasswd"],
-            workdir='/workspace',
-        )
-        if exit_code != 0:
-            raise Exception(f'Failed to set password in sandbox: {logs}')
-
-        if not RUN_AS_DEVIN:
+        if RUN_AS_DEVIN:
+            exit_code, logs = self.container.exec_run(
+                ['/bin/bash', '-c',
+                    f'useradd -rm -d /home/opendevin -s /bin/bash -g root -G sudo -u {USER_ID} opendevin'],
+                workdir='/workspace',
+            )
+            if exit_code != 0:
+                raise Exception(
+                    f'Failed to create opendevin user in sandbox: {logs}')
+            exit_code, logs = self.container.exec_run(
+                ['/bin/bash', '-c',
+                    f"echo 'opendevin:{self._ssh_password}' | chpasswd"],
+                workdir='/workspace',
+            )
+            if exit_code != 0:
+                raise Exception(f'Failed to set password in sandbox: {logs}')
+        else:
             exit_code, logs = self.container.exec_run(
                 # change password for root
                 ['/bin/bash', '-c',
@@ -148,7 +152,7 @@ class DockerSSHBox(Sandbox):
     def start_ssh_session(self):
         # start ssh session at the background
         self.ssh = pxssh.pxssh()
-        hostname = 'localhost'
+        hostname = 'host.docker.internal'
         if RUN_AS_DEVIN:
             username = 'opendevin'
         else:
@@ -287,9 +291,9 @@ class DockerSSHBox(Sandbox):
             docker_client = docker.from_env()
 
             network_kwargs: Dict[str, Union[str, Dict[str, int]]] = {}
-            if platform.system() == 'Linux':
+            if USE_HOST_NETWORK:
                 network_kwargs['network_mode'] = 'host'
-            elif platform.system() == 'Darwin':
+            else:
                 # FIXME: This is a temporary workaround for Mac OS
                 network_kwargs['ports'] = {'2222/tcp': 2222}
                 logger.warning(
